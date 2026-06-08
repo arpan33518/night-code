@@ -47,7 +47,7 @@ export function SessionShell({
                 paddingLeft={1}
             >
                 <box flexDirection="row" alignItems="center" gap={2}>
-                    {loading ? <text><Spinner/></text> : null}
+                    {loading ? <Spinner/> : null}
                 </box>
 
                 <box
