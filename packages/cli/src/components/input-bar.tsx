@@ -7,6 +7,10 @@ import { StatusBar } from "./status-bar";
 import { CommandMenu } from "./command-menu";
 import type { Command } from "./command-menu/types";
 import { useCommandMenu } from "./command-menu/use-command-menu";
+import { useToast } from "../providers/toast/index";
+import { useKeyboardLayer } from "../providers/keyboard-layer";
+import { useDialog } from "../providers/dialog";
+import { useTheme } from "../providers/theme";
 
 type props = {
     onSubmit: (text: string) => void
@@ -26,6 +30,10 @@ export function InputBar({ onSubmit, disabled = false }: props) {
     const textareaRef = useRef<TextareaRenderable>(null);
     const onSubmitRef = useRef<() => void>(() => { });
     const renderer = useRenderer();
+    const toast = useToast();
+    const dialog = useDialog();
+    const {colors} = useTheme();
+    const { isTopLayer, setResponder } = useKeyboardLayer()
 
 
 
@@ -54,6 +62,8 @@ export function InputBar({ onSubmit, disabled = false }: props) {
                         renderer.destroy();
                         process.exit(0);
                     },
+                    toast: toast,
+                    dialog: dialog,
                 });
             } else {
                 textarea.insertText(command.value + " ");
@@ -114,6 +124,23 @@ export function InputBar({ onSubmit, disabled = false }: props) {
         handleSubmit();
     };
 
+    // Register the base layer responder for ctrl+c dismissal
+    useEffect(() => {
+        setResponder("base", () => {
+            if (disabled) return false;
+
+            const textarea = textareaRef.current;
+            if (textarea && textarea.plainText.length > 0) {
+                textarea.setText("");
+                return true;
+            }
+            return false;
+        });
+
+
+        return () => setResponder("base", null);
+    }, [disabled, setResponder]);
+
     return (
         <box width="100%" alignItems="center">
             <box
@@ -131,7 +158,7 @@ export function InputBar({ onSubmit, disabled = false }: props) {
                     justifyContent="center"
                     paddingX={2}
                     paddingY={1}
-                    backgroundColor="#1A1A24"
+                    backgroundColor={colors.surface}
                     width="100%"
                     gap={1}
                 >
@@ -155,7 +182,7 @@ export function InputBar({ onSubmit, disabled = false }: props) {
                     )}
                     <textarea
                         ref={textareaRef}
-                        focused={!disabled}
+                        focused={!disabled && (isTopLayer("base") || isTopLayer("command"))}
                         keyBindings={TEXTAREA_KEY_BINDINGS}
                         onContentChange={handleTextareaContentChange}
                         placeholder={`Ask anything ...Fix a bug in the database`}
